@@ -1,11 +1,10 @@
 [package]
 name = "bitcoin-rest"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Masahiko Hyuga <mail@mhyuga.jp>"]
 license = "MIT"
 description = "Bitcoin Core REST API client and library for Rust"
 repository = "https://github.com/visvirial/bitcoin-rest"
-documentation = "https://docs.serde.rs/bitcoin-rest/"
 categories = ["api-bindings"]
 keywords = ["bitcoin", "cryptocurrency", "rest"]
 edition = "2018"
