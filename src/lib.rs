@@ -23,6 +23,7 @@ pub struct Softfork {
     #[serde(rename="type")]
     type_: String,
     active: bool,
+    #[serde(default)]
     height: u32,
 }
 
