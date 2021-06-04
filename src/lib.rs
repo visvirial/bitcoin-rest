@@ -1,3 +1,9 @@
+//! bitcoin_rest - A Bitcoin Core REST API wrapper library for Rust.
+//! 
+//! This library calls the [Bitcoin Core's REST API endpoint](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md) and
+//! converts them to [rust-bitcoin](https://github.com/rust-bitcoin/rust-bitcoin) objects.
+//! For details, please see [Context](./struct.Context.html).
+
 use std::str::FromStr;
 use std::collections::HashMap;
 use serde::Deserialize;
@@ -61,12 +67,13 @@ pub struct UtxoData {
     utxos: Vec<Utxo>,
 }
 
+/// `bitcoin_rest` context.
 pub struct Context {
     endpoint: String,
 }
 
 impl Context {
-    /// Call the REST endpoint.
+    /// Call the REST endpoint and parse it as a JSON.
     pub async fn call_json<T: for<'de> Deserialize<'de>>(&self, path: &str) -> Result<T, Box<dyn std::error::Error>> {
         let url = String::new() + &self.endpoint + path + ".json";
         let result = reqwest::get(url)
@@ -75,6 +82,7 @@ impl Context {
             .await?;
         Ok(result)
     }
+    /// Call the REST endpoint (binary).
     pub async fn call_bin(&self, path: &str) -> Result<bytes::Bytes, Box<dyn std::error::Error>> {
         let url = String::new() + &self.endpoint + path + ".bin";
         let result = reqwest::get(url)
@@ -83,6 +91,7 @@ impl Context {
             .await?;
         Ok(result)
     }
+    /// Call the REST endpoint (hex).
     pub async fn call_hex(&self, path: &str) -> Result<String, Box<dyn std::error::Error>> {
         let url = String::new() + &self.endpoint + path + ".hex";
         let mut result = reqwest::get(url)
@@ -93,24 +102,28 @@ impl Context {
         result.pop();
         Ok(result)
     }
+    /// Call the [/tx](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#transactions) endpoint.
     pub async fn tx(&self, txhash: bitcoin::hash_types::Txid)
         -> Result<bitcoin::blockdata::transaction::Transaction, Box<dyn std::error::Error>> {
         let path = String::from("tx/") + &txhash.to_string();
         let result = self.call_bin(&path).await?;
         Ok(bitcoin::blockdata::transaction::Transaction::consensus_decode(result.as_ref())?)
     }
+    /// Call the [/block](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blocks) endpoint.
     pub async fn block(&self, blockhash: bitcoin::hash_types::BlockHash) ->
         Result<bitcoin::blockdata::block::Block, Box<dyn std::error::Error>> {
         let path = String::from("block/") + &blockhash.to_string();
         let result = self.call_bin(&path).await?;
         Ok(bitcoin::blockdata::block::Block::consensus_decode(result.as_ref())?)
     }
+    /// Call the [/block/notxdetails](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blocks) endpoint.
     pub async fn block_notxdetails(&self, blockhash: bitcoin::hash_types::BlockHash) ->
         Result<bitcoin::blockdata::block::BlockHeader, Box<dyn std::error::Error>> {
         let path = String::from("block/notxdetails/") + &blockhash.to_string();
         let result = self.call_bin(&path).await?;
         Ok(bitcoin::blockdata::block::BlockHeader::consensus_decode(result.as_ref())?)
     }
+    /// Call the [/headers](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blockheaders) endpoint.
     pub async fn headers(&self, count: u32, blockhash: bitcoin::hash_types::BlockHash) ->
         Result<Vec<bitcoin::blockdata::block::BlockHeader>, Box<dyn std::error::Error>> {
         let path = String::from("headers/") + &count.to_string() + "/" + &blockhash.to_string();
@@ -123,15 +136,18 @@ impl Context {
         }
         Ok(ret)
     }
+    /// Call the [/blockhashbyheight](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blockhash-by-height) endpoint.
     pub async fn blockhashbyheight(&self, height: u32) -> Result<bitcoin::hash_types::BlockHash, Box<dyn std::error::Error>> {
         let path = String::from("blockhashbyheight/") + &height.to_string();
         let result = self.call_hex(&path).await?;
         Ok(bitcoin::hash_types::BlockHash::from_str(&result)?)
     }
+    /// Call the [/chaininfo](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#chaininfo) endpoint.
     pub async fn chaininfo(&self) -> Result<ChainInfo, Box<dyn std::error::Error>> {
         let result: ChainInfo = self.call_json("chaininfo").await?;
         Ok(result)
     }
+    /// Call the [/getutxos](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#query-utxo-set) endpoint.
     pub async fn getutxos(&self, checkmempool: bool, txids: &Vec<bitcoin::hash_types::Txid>) ->
         Result<UtxoData, Box<dyn std::error::Error>> {
         let mut url = String::from("getutxos/");
@@ -146,6 +162,10 @@ impl Context {
     }
 }
 
+/// Create a new `bitcoin_rest` context.
+///
+/// The `endpoint` will be the string like "http://localhost:8332/rest/"
+/// (Note: this string is available via `bitcoin_rest::DEFAULT_ENDPOINT`).
 pub fn new(endpoint: &str) -> Context {
     Context{ endpoint: endpoint.to_string() }
 }
