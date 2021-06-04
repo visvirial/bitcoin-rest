@@ -152,50 +152,57 @@ pub fn new(endpoint: &str) -> Context {
 #[cfg(test)]
 mod tests {
     use super::*;
-    const TEST_ENDPOINT: &str = DEFAULT_ENDPOINT;
+    const REST_ENV_NAME: &str = "BITCOIN_REST_ENDPOINT";
     const GENESIS_BLOCK_HASH: &str = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";
     const TXID_COINBASE_BLOCK1: &str = "0e3e2357e806b6cdb1f70b54c3a3a17b6714ee1f0e68bebb44a74b1efd512098";
     #[tokio::test]
     async fn tx() {
-        let rest = new(TEST_ENDPOINT);
+        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
+        let rest = new(&test_endpoint);
         let tx = rest.tx(bitcoin::hash_types::Txid::from_str(TXID_COINBASE_BLOCK1).unwrap()).await.unwrap();
         assert_eq!(tx.txid().to_string(), TXID_COINBASE_BLOCK1);
     }
     #[tokio::test]
     async fn block() {
-        let rest = new(TEST_ENDPOINT);
+        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
+        let rest = new(&test_endpoint);
         let blockid = bitcoin::hash_types::BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
         let block = rest.block(blockid).await.unwrap();
         assert_eq!(block.block_hash().to_string(), GENESIS_BLOCK_HASH);
     }
     #[tokio::test]
     async fn block_notxdetails() {
-        let rest = new(TEST_ENDPOINT);
+        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
+        let rest = new(&test_endpoint);
         let blockid = bitcoin::hash_types::BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
         let blockheader = rest.block_notxdetails(blockid).await.unwrap();
         assert_eq!(blockheader.block_hash().to_string(), GENESIS_BLOCK_HASH);
     }
     #[tokio::test]
     async fn headers() {
-        let rest = new(TEST_ENDPOINT);
+        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
+        let rest = new(&test_endpoint);
         let blockid = bitcoin::hash_types::BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
         let headers = rest.headers(1, blockid).await.unwrap();
         assert_eq!(headers[0].block_hash().to_string(), GENESIS_BLOCK_HASH);
     }
     #[tokio::test]
     async fn chaininfo() {
-        let rest = new(TEST_ENDPOINT);
+        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
+        let rest = new(&test_endpoint);
         let chaininfo = rest.chaininfo().await.unwrap();
         assert_eq!(chaininfo.chain, "main");
     }
     #[tokio::test]
     async fn blockhashbyheight() {
-        let rest = new(TEST_ENDPOINT);
+        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
+        let rest = new(&test_endpoint);
         assert_eq!(rest.blockhashbyheight(0).await.unwrap().to_string(), GENESIS_BLOCK_HASH);
     }
     #[tokio::test]
     async fn utxos() {
-        let rest = new(TEST_ENDPOINT);
+        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
+        let rest = new(&test_endpoint);
         let utxos = rest.getutxos(true, &vec![
             bitcoin::hash_types::Txid::from_str(TXID_COINBASE_BLOCK1).unwrap(),
         ]).await.unwrap();
