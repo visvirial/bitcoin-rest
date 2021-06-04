@@ -6,145 +6,16 @@ use bitcoin::consensus::Decodable;
 pub const DEFAULT_ENDPOINT: &str = "http://localhost:8332/rest/";
 
 #[derive(Debug, Deserialize)]
-pub struct BlockHashByHeight {
-    blockhash: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ScriptSig {
-    asm: String,
-    hex: String,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Vin {
-    txid: String,
-    vout: u32,
-    script_sig: ScriptSig,
-    sequence: u32,
-    txinwitness: Vec<String>,
-}
-
-impl Vin {
-    pub fn to_vin(&self) -> Result<bitcoin::blockdata::transaction::TxIn, Box<dyn std::error::Error>> {
-        Ok(bitcoin::blockdata::transaction::TxIn{
-            previous_output: bitcoin::blockdata::transaction::OutPoint{
-                txid: bitcoin::hash_types::Txid::from_str(&self.txid).unwrap(),
-                vout: self.vout,
-            },
-            script_sig: bitcoin::blockdata::script::Script::from_str(&self.script_sig.hex).unwrap(),
-            sequence: self.sequence,
-            witness: self.txinwitness.iter().map(|witness| {
-                let mut buf: Vec<u8> = Vec::new();
-                buf.resize(witness.len() / 2, 0);
-                hex::decode_to_slice(witness, &mut buf).unwrap();
-                buf
-            }).collect(),
-        })
-    }
-}
-
-#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScriptPubKey {
     asm: String,
     hex: String,
+    #[serde(default)]
     req_sigs: u32,
     #[serde(rename="type")]
     type_: String,
+    #[serde(default)]
     addresses: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Vout {
-    value: f64,
-    script_pub_key: ScriptPubKey,
-}
-
-impl Vout {
-    pub fn to_vout(&self) -> Result<bitcoin::blockdata::transaction::TxOut, Box<dyn std::error::Error>> {
-        Ok(bitcoin::blockdata::transaction::TxOut{
-            value: (1e8 * self.value) as u64,
-            script_pubkey: bitcoin::blockdata::script::Script::from_str(&self.script_pub_key.hex).unwrap(),
-        })
-    }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Tx {
-    version: i32,
-    locktime: u32,
-    vin: Vec<Vin>,
-    vout: Vec<Vout>,
-}
-
-impl Tx {
-    pub fn to_transaction(&self) -> Result<bitcoin::blockdata::transaction::Transaction, Box<dyn std::error::Error>> {
-        let vins = self.vin.iter().map(|vin| vin.to_vin()).collect::<Result<Vec<_>, _>>()?;
-        let vouts = self.vout.iter().map(|vout| vout.to_vout()).collect::<Result<Vec<_>, _>>()?;
-        Ok(bitcoin::blockdata::transaction::Transaction{
-            version: self.version,
-            lock_time: self.locktime,
-            input: vins,
-            output: vouts,
-        })
-    }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct BlockHeader {
-    version: i32,
-    previousblockhash: String,
-    merkleroot: String,
-    time: u32,
-    bits: String,
-    nonce: u32,
-}
-
-macro_rules! to_block_header {
-    ($self: expr) => {
-        bitcoin::blockdata::block::BlockHeader{
-            version: $self.version,
-            prev_blockhash: bitcoin::hash_types::BlockHash::from_str(&$self.previousblockhash)?,
-            merkle_root: bitcoin::hash_types::TxMerkleNode::from_str(&$self.merkleroot)?,
-            time: $self.time,
-            bits: u32::from_str_radix(&$self.bits, 16)?,
-            nonce: $self.nonce,
-        }
-    }
-}
-
-impl BlockHeader {
-    pub fn to_block_header(&self) -> Result<bitcoin::blockdata::block::BlockHeader, Box<dyn std::error::Error>> {
-        Ok(to_block_header!(self))
-    }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Block {
-    version: i32,
-    previousblockhash: String,
-    merkleroot: String,
-    time: u32,
-    bits: String,
-    nonce: u32,
-    tx: Vec<Tx>,
-}
-
-impl Block {
-    pub fn to_block_header(&self) -> Result<bitcoin::blockdata::block::BlockHeader, Box<dyn std::error::Error>> {
-        Ok(to_block_header!(self))
-    }
-    pub fn to_block(&self) -> Result<bitcoin::blockdata::block::Block, Box<dyn std::error::Error>> {
-        let blockheader = self.to_block_header()?;
-        let transactions = self.tx.iter().map(|tx| tx.to_transaction()).collect::<Result<Vec<_>, _>>()?;
-        Ok(bitcoin::blockdata::block::Block{
-            header: blockheader,
-            txdata: transactions,
-        })
-    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -276,4 +147,58 @@ impl Context {
 
 pub fn new(endpoint: &str) -> Context {
     Context{ endpoint: endpoint.to_string() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    const TEST_ENDPOINT: &str = DEFAULT_ENDPOINT;
+    const GENESIS_BLOCK_HASH: &str = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";
+    const TXID_COINBASE_BLOCK1: &str = "0e3e2357e806b6cdb1f70b54c3a3a17b6714ee1f0e68bebb44a74b1efd512098";
+    #[tokio::test]
+    async fn tx() {
+        let rest = new(TEST_ENDPOINT);
+        let tx = rest.tx(bitcoin::hash_types::Txid::from_str(TXID_COINBASE_BLOCK1).unwrap()).await.unwrap();
+        assert_eq!(tx.txid().to_string(), TXID_COINBASE_BLOCK1);
+    }
+    #[tokio::test]
+    async fn block() {
+        let rest = new(TEST_ENDPOINT);
+        let blockid = bitcoin::hash_types::BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
+        let block = rest.block(blockid).await.unwrap();
+        assert_eq!(block.block_hash().to_string(), GENESIS_BLOCK_HASH);
+    }
+    #[tokio::test]
+    async fn block_notxdetails() {
+        let rest = new(TEST_ENDPOINT);
+        let blockid = bitcoin::hash_types::BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
+        let blockheader = rest.block_notxdetails(blockid).await.unwrap();
+        assert_eq!(blockheader.block_hash().to_string(), GENESIS_BLOCK_HASH);
+    }
+    #[tokio::test]
+    async fn headers() {
+        let rest = new(TEST_ENDPOINT);
+        let blockid = bitcoin::hash_types::BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
+        let headers = rest.headers(1, blockid).await.unwrap();
+        assert_eq!(headers[0].block_hash().to_string(), GENESIS_BLOCK_HASH);
+    }
+    #[tokio::test]
+    async fn chaininfo() {
+        let rest = new(TEST_ENDPOINT);
+        let chaininfo = rest.chaininfo().await.unwrap();
+        assert_eq!(chaininfo.chain, "main");
+    }
+    #[tokio::test]
+    async fn blockhashbyheight() {
+        let rest = new(TEST_ENDPOINT);
+        assert_eq!(rest.blockhashbyheight(0).await.unwrap().to_string(), GENESIS_BLOCK_HASH);
+    }
+    #[tokio::test]
+    async fn utxos() {
+        let rest = new(TEST_ENDPOINT);
+        let utxos = rest.getutxos(true, &vec![
+            bitcoin::hash_types::Txid::from_str(TXID_COINBASE_BLOCK1).unwrap(),
+        ]).await.unwrap();
+        assert!(utxos.chain_height > 0);
+    }
 }
