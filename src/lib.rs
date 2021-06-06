@@ -12,59 +12,59 @@ use bitcoin::consensus::Decodable;
 pub const DEFAULT_ENDPOINT: &str = "http://localhost:8332/rest/";
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ScriptPubKey {
-    asm: String,
-    hex: String,
-    #[serde(default)]
-    req_sigs: u32,
-    #[serde(rename="type")]
-    type_: String,
-    #[serde(default)]
-    addresses: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct Softfork {
     #[serde(rename="type")]
-    type_: String,
-    active: bool,
+    pub type_: String,
+    pub active: bool,
     #[serde(default)]
-    height: u32,
+    pub height: u32,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ChainInfo {
-    chain: String,
-    blocks: u32,
-    headers: u32,
-    bestblockhash: String,
-    difficulty: f64,
-    mediantime: u32,
-    verificationprogress: f64,
-    chainwork: String,
-    pruned: bool,
+    pub chain: String,
+    pub blocks: u32,
+    pub headers: u32,
+    pub bestblockhash: String,
+    pub difficulty: f64,
+    pub mediantime: u32,
+    pub verificationprogress: f64,
+    pub chainwork: String,
+    pub pruned: bool,
     #[serde(default)]
-    pruneheight: u32,
-    softforks: HashMap<String, Softfork>,
-    warnings: String,
+    pub pruneheight: u32,
+    pub softforks: HashMap<String, Softfork>,
+    pub warnings: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScriptPubKey {
+    pub asm: String,
+    pub hex: String,
+    #[serde(default)]
+    pub req_sigs: u32,
+    #[serde(rename="type")]
+    pub type_: String,
+    #[serde(default)]
+    pub addresses: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Utxo {
-    height: u32,
-    value: f64,
-    script_pub_key: ScriptPubKey,
+    pub height: u32,
+    pub value: f64,
+    pub script_pub_key: ScriptPubKey,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UtxoData {
-    chain_height: u32,
-    chaintip_hash: String,
-    bitmap: String,
-    utxos: Vec<Utxo>,
+    pub chain_height: u32,
+    pub chaintip_hash: String,
+    pub bitmap: String,
+    pub utxos: Vec<Utxo>,
 }
 
 /// `bitcoin_rest` context.
