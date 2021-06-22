@@ -7,6 +7,9 @@
 use std::str::FromStr;
 use std::collections::HashMap;
 use serde::Deserialize;
+use bitcoin::hash_types::{BlockHash, Txid};
+use bitcoin::blockdata::block::{Block, BlockHeader};
+use bitcoin::blockdata::transaction::Transaction;
 use bitcoin::consensus::Decodable;
 
 pub const DEFAULT_ENDPOINT: &str = "http://localhost:8332/rest/";
@@ -103,44 +106,44 @@ impl Context {
         Ok(result)
     }
     /// Call the [/tx](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#transactions) endpoint.
-    pub async fn tx(&self, txhash: bitcoin::hash_types::Txid)
-        -> Result<bitcoin::blockdata::transaction::Transaction, Box<dyn std::error::Error>> {
+    pub async fn tx(&self, txhash: &Txid)
+        -> Result<Transaction, Box<dyn std::error::Error>> {
         let path = String::from("tx/") + &txhash.to_string();
         let result = self.call_bin(&path).await?;
-        Ok(bitcoin::blockdata::transaction::Transaction::consensus_decode(result.as_ref())?)
+        Ok(Transaction::consensus_decode(result.as_ref())?)
     }
     /// Call the [/block](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blocks) endpoint.
-    pub async fn block(&self, blockhash: bitcoin::hash_types::BlockHash) ->
-        Result<bitcoin::blockdata::block::Block, Box<dyn std::error::Error>> {
+    pub async fn block(&self, blockhash: &BlockHash) ->
+        Result<Block, Box<dyn std::error::Error>> {
         let path = String::from("block/") + &blockhash.to_string();
         let result = self.call_bin(&path).await?;
-        Ok(bitcoin::blockdata::block::Block::consensus_decode(result.as_ref())?)
+        Ok(Block::consensus_decode(result.as_ref())?)
     }
     /// Call the [/block/notxdetails](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blocks) endpoint.
-    pub async fn block_notxdetails(&self, blockhash: bitcoin::hash_types::BlockHash) ->
-        Result<bitcoin::blockdata::block::BlockHeader, Box<dyn std::error::Error>> {
+    pub async fn block_notxdetails(&self, blockhash: &BlockHash) ->
+        Result<BlockHeader, Box<dyn std::error::Error>> {
         let path = String::from("block/notxdetails/") + &blockhash.to_string();
         let result = self.call_bin(&path).await?;
-        Ok(bitcoin::blockdata::block::BlockHeader::consensus_decode(result.as_ref())?)
+        Ok(BlockHeader::consensus_decode(result.as_ref())?)
     }
     /// Call the [/headers](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blockheaders) endpoint.
-    pub async fn headers(&self, count: u32, blockhash: bitcoin::hash_types::BlockHash) ->
-        Result<Vec<bitcoin::blockdata::block::BlockHeader>, Box<dyn std::error::Error>> {
+    pub async fn headers(&self, count: u32, blockhash: &BlockHash) ->
+        Result<Vec<BlockHeader>, Box<dyn std::error::Error>> {
         let path = String::from("headers/") + &count.to_string() + "/" + &blockhash.to_string();
         let result = self.call_bin(&path).await?;
         let mut ret = Vec::new();
         for i in 0..count {
             let begin = (i as usize) * 80usize;
             let end = ((i + 1) as usize) * 80usize;
-            ret.push(bitcoin::blockdata::block::BlockHeader::consensus_decode(result.slice(begin .. end).as_ref())?);
+            ret.push(BlockHeader::consensus_decode(result.slice(begin .. end).as_ref())?);
         }
         Ok(ret)
     }
     /// Call the [/blockhashbyheight](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blockhash-by-height) endpoint.
-    pub async fn blockhashbyheight(&self, height: u32) -> Result<bitcoin::hash_types::BlockHash, Box<dyn std::error::Error>> {
+    pub async fn blockhashbyheight(&self, height: u32) -> Result<BlockHash, Box<dyn std::error::Error>> {
         let path = String::from("blockhashbyheight/") + &height.to_string();
         let result = self.call_hex(&path).await?;
-        Ok(bitcoin::hash_types::BlockHash::from_str(&result)?)
+        Ok(BlockHash::from_str(&result)?)
     }
     /// Call the [/chaininfo](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#chaininfo) endpoint.
     pub async fn chaininfo(&self) -> Result<ChainInfo, Box<dyn std::error::Error>> {
@@ -148,7 +151,7 @@ impl Context {
         Ok(result)
     }
     /// Call the [/getutxos](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#query-utxo-set) endpoint.
-    pub async fn getutxos(&self, checkmempool: bool, txids: &Vec<bitcoin::hash_types::Txid>) ->
+    pub async fn getutxos(&self, checkmempool: bool, txids: &Vec<Txid>) ->
         Result<UtxoData, Box<dyn std::error::Error>> {
         let mut url = String::from("getutxos/");
         if checkmempool {
@@ -180,31 +183,31 @@ mod tests {
     async fn tx() {
         let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
         let rest = new(&test_endpoint);
-        let tx = rest.tx(bitcoin::hash_types::Txid::from_str(TXID_COINBASE_BLOCK1).unwrap()).await.unwrap();
+        let tx = rest.tx(&Txid::from_str(TXID_COINBASE_BLOCK1).unwrap()).await.unwrap();
         assert_eq!(tx.txid().to_string(), TXID_COINBASE_BLOCK1);
     }
     #[tokio::test]
     async fn block() {
         let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
         let rest = new(&test_endpoint);
-        let blockid = bitcoin::hash_types::BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
-        let block = rest.block(blockid).await.unwrap();
+        let blockid = BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
+        let block = rest.block(&blockid).await.unwrap();
         assert_eq!(block.block_hash().to_string(), GENESIS_BLOCK_HASH);
     }
     #[tokio::test]
     async fn block_notxdetails() {
         let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
         let rest = new(&test_endpoint);
-        let blockid = bitcoin::hash_types::BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
-        let blockheader = rest.block_notxdetails(blockid).await.unwrap();
+        let blockid = BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
+        let blockheader = rest.block_notxdetails(&blockid).await.unwrap();
         assert_eq!(blockheader.block_hash().to_string(), GENESIS_BLOCK_HASH);
     }
     #[tokio::test]
     async fn headers() {
         let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
         let rest = new(&test_endpoint);
-        let blockid = bitcoin::hash_types::BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
-        let headers = rest.headers(1, blockid).await.unwrap();
+        let blockid = BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
+        let headers = rest.headers(1, &blockid).await.unwrap();
         assert_eq!(headers[0].block_hash().to_string(), GENESIS_BLOCK_HASH);
     }
     #[tokio::test]
@@ -225,7 +228,7 @@ mod tests {
         let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
         let rest = new(&test_endpoint);
         let utxos = rest.getutxos(true, &vec![
-            bitcoin::hash_types::Txid::from_str(TXID_COINBASE_BLOCK1).unwrap(),
+            Txid::from_str(TXID_COINBASE_BLOCK1).unwrap(),
         ]).await.unwrap();
         assert!(utxos.chain_height > 0);
     }
