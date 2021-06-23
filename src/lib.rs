@@ -71,6 +71,7 @@ pub struct UtxoData {
 }
 
 /// `bitcoin_rest` context.
+#[derive(Debug, Clone)]
 pub struct Context {
     endpoint: String,
 }
