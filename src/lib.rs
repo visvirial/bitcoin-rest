@@ -74,34 +74,43 @@ pub struct UtxoData {
 #[derive(Debug, Clone)]
 pub struct Context {
     endpoint: String,
+    client: reqwest::Client,
+}
+
+/// Create a new `bitcoin_rest` context.
+///
+/// The `endpoint` will be the string like "http://localhost:8332/rest/"
+/// (Note: this string is available via `bitcoin_rest::DEFAULT_ENDPOINT`).
+pub fn new(endpoint: &str) -> Context {
+    Context {
+        endpoint: endpoint.to_string(),
+        client: reqwest::Client::new(),
+    }
 }
 
 impl Context {
     /// Call the REST endpoint and parse it as a JSON.
     pub async fn call_json<T: for<'de> Deserialize<'de>>(&self, path: &str) -> Result<T, reqwest::Error> {
         let url = String::new() + &self.endpoint + path + ".json";
-        let result = reqwest::get(url)
-            .await?
-            .json::<T>()
-            .await?;
+        let result = self.client.get(url)
+            .send().await?
+            .json::<T>().await?;
         Ok(result)
     }
     /// Call the REST endpoint (binary).
     pub async fn call_bin(&self, path: &str) -> Result<bytes::Bytes, reqwest::Error> {
         let url = String::new() + &self.endpoint + path + ".bin";
-        let result = reqwest::get(url)
-            .await?
-            .bytes()
-            .await?;
+        let result = self.client.get(url)
+            .send().await?
+            .bytes().await?;
         Ok(result)
     }
     /// Call the REST endpoint (hex).
     pub async fn call_hex(&self, path: &str) -> Result<String, reqwest::Error> {
         let url = String::new() + &self.endpoint + path + ".hex";
-        let mut result = reqwest::get(url)
-            .await?
-            .text()
-            .await?;
+        let mut result = self.client.get(url)
+            .send().await?
+            .text().await?;
         // Trim last '\n'.
         result.pop();
         Ok(result)
@@ -159,14 +168,6 @@ impl Context {
         let result: UtxoData = self.call_json(&url).await?;
         Ok(result)
     }
-}
-
-/// Create a new `bitcoin_rest` context.
-///
-/// The `endpoint` will be the string like "http://localhost:8332/rest/"
-/// (Note: this string is available via `bitcoin_rest::DEFAULT_ENDPOINT`).
-pub fn new(endpoint: &str) -> Context {
-    Context{ endpoint: endpoint.to_string() }
 }
 
 #[cfg(test)]
