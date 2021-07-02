@@ -5,6 +5,7 @@
 //! For details, please see [Context](./struct.Context.html).
 
 use std::str::FromStr;
+#[cfg(feature="softforks")]
 use std::collections::HashMap;
 use serde::Deserialize;
 use bitcoin::hash_types::{BlockHash, Txid};
@@ -36,6 +37,7 @@ pub struct ChainInfo {
     pub pruned: bool,
     #[serde(default)]
     pub pruneheight: u32,
+    #[cfg(feature="softforks")]
     pub softforks: HashMap<String, Softfork>,
     pub warnings: String,
 }
@@ -230,32 +232,24 @@ mod tests {
         genesis_block_hash: "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
         txid_coinbase_block1: "0e3e2357e806b6cdb1f70b54c3a3a17b6714ee1f0e68bebb44a74b1efd512098",
     };
-    #[tokio::test]
-    async fn btc_tx() {
-        tx(&BTC).await;
-    }
-    #[tokio::test]
-    async fn btc_block() {
-        block(&BTC).await;
-    }
-    #[tokio::test]
-    async fn btc_block_notxdetails() {
-        block_notxdetails(&BTC).await;
-    }
-    #[tokio::test]
-    async fn btc_headers() {
-        headers(&BTC).await;
-    }
-    #[tokio::test]
-    async fn btc_chaininfo() {
-        chaininfo(&BTC).await;
-    }
-    #[tokio::test]
-    async fn btc_blockhashbyheight() {
-        blockhashbyheight(&BTC).await;
-    }
-    #[tokio::test]
-    async fn btc_utxos() {
-        utxos(&BTC).await;
-    }
+    #[tokio::test] async fn btc_tx               () { tx               (&BTC).await; }
+    #[tokio::test] async fn btc_block            () { block            (&BTC).await; }
+    #[tokio::test] async fn btc_block_notxdetails() { block_notxdetails(&BTC).await; }
+    #[tokio::test] async fn btc_headers          () { headers          (&BTC).await; }
+    #[tokio::test] async fn btc_chaininfo        () { chaininfo        (&BTC).await; }
+    #[tokio::test] async fn btc_blockhashbyheight() { blockhashbyheight(&BTC).await; }
+    #[tokio::test] async fn btc_utxos            () { utxos            (&BTC).await; }
+    const MONA: Fixture = Fixture {
+        rest_env_name: "MONACOIN_REST_ENDPOINT",
+        genesis_block_hash: "ff9f1c0116d19de7c9963845e129f9ed1bfc0b376eb54fd7afa42e0d418c8bb6",
+        txid_coinbase_block1: "10067abeabcd96a1261bc542b16d686d083308304923d74cb8f3bab4209cc3b9",
+    };
+    #[tokio::test] async fn mona_tx               () { tx               (&MONA).await; }
+    #[tokio::test] async fn mona_block            () { block            (&MONA).await; }
+    #[tokio::test] async fn mona_block_notxdetails() { block_notxdetails(&MONA).await; }
+    #[tokio::test] async fn mona_headers          () { headers          (&MONA).await; }
+    #[cfg(not(feature="softforks"))]
+    #[tokio::test] async fn mona_chaininfo        () { chaininfo        (&MONA).await; }
+    //#[tokio::test] async fn mona_blockhashbyheight() { blockhashbyheight(&MONA).await; }
+    #[tokio::test] async fn mona_utxos            () { utxos            (&MONA).await; }
 }
