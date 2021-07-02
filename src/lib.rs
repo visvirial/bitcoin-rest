@@ -170,63 +170,92 @@ impl Context {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    const REST_ENV_NAME: &str = "BITCOIN_REST_ENDPOINT";
-    const GENESIS_BLOCK_HASH: &str = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";
-    const TXID_COINBASE_BLOCK1: &str = "0e3e2357e806b6cdb1f70b54c3a3a17b6714ee1f0e68bebb44a74b1efd512098";
-    #[tokio::test]
-    async fn tx() {
-        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
-        let rest = new(&test_endpoint);
-        let tx = rest.tx(&Txid::from_str(TXID_COINBASE_BLOCK1).unwrap()).await.unwrap();
-        assert_eq!(tx.txid().to_string(), TXID_COINBASE_BLOCK1);
+    struct Fixture {
+        rest_env_name: &'static str,
+        genesis_block_hash: &'static str,
+        txid_coinbase_block1: &'static str,
     }
-    #[tokio::test]
-    async fn block() {
-        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
+    async fn tx(f: &Fixture) {
+        let test_endpoint = std::env::var(f.rest_env_name).unwrap_or(DEFAULT_ENDPOINT.to_string());
         let rest = new(&test_endpoint);
-        let blockid = BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
+        let tx = rest.tx(&Txid::from_str(f.txid_coinbase_block1).unwrap()).await.unwrap();
+        assert_eq!(tx.txid().to_string(), f.txid_coinbase_block1);
+    }
+    async fn block(f: &Fixture) {
+        let test_endpoint = std::env::var(f.rest_env_name).unwrap_or(DEFAULT_ENDPOINT.to_string());
+        let rest = new(&test_endpoint);
+        let blockid = BlockHash::from_str(f.genesis_block_hash).unwrap();
         let block = rest.block(&blockid).await.unwrap();
-        assert_eq!(block.block_hash().to_string(), GENESIS_BLOCK_HASH);
+        assert_eq!(block.block_hash().to_string(), f.genesis_block_hash);
     }
-    #[tokio::test]
-    async fn block_notxdetails() {
-        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
+    async fn block_notxdetails(f: &Fixture) {
+        let test_endpoint = std::env::var(f.rest_env_name).unwrap_or(DEFAULT_ENDPOINT.to_string());
         let rest = new(&test_endpoint);
-        let blockid = BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
+        let blockid = BlockHash::from_str(f.genesis_block_hash).unwrap();
         let blockheader = rest.block_notxdetails(&blockid).await.unwrap();
-        assert_eq!(blockheader.block_hash().to_string(), GENESIS_BLOCK_HASH);
+        assert_eq!(blockheader.block_hash().to_string(), f.genesis_block_hash);
     }
-    #[tokio::test]
-    async fn headers() {
-        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
+    async fn headers(f: &Fixture) {
+        let test_endpoint = std::env::var(f.rest_env_name).unwrap_or(DEFAULT_ENDPOINT.to_string());
         let rest = new(&test_endpoint);
-        let blockid = BlockHash::from_str(GENESIS_BLOCK_HASH).unwrap();
+        let blockid = BlockHash::from_str(f.genesis_block_hash).unwrap();
         let headers = rest.headers(1, &blockid).await.unwrap();
-        assert_eq!(headers[0].block_hash().to_string(), GENESIS_BLOCK_HASH);
+        assert_eq!(headers[0].block_hash().to_string(), f.genesis_block_hash);
     }
-    #[tokio::test]
-    async fn chaininfo() {
-        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
+    async fn chaininfo(f: &Fixture) {
+        let test_endpoint = std::env::var(f.rest_env_name).unwrap_or(DEFAULT_ENDPOINT.to_string());
         let rest = new(&test_endpoint);
         let chaininfo = rest.chaininfo().await.unwrap();
         assert_eq!(chaininfo.chain, "main");
     }
-    #[tokio::test]
-    async fn blockhashbyheight() {
-        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
+    async fn blockhashbyheight(f: &Fixture) {
+        let test_endpoint = std::env::var(f.rest_env_name).unwrap_or(DEFAULT_ENDPOINT.to_string());
         let rest = new(&test_endpoint);
-        assert_eq!(rest.blockhashbyheight(0).await.unwrap().to_string(), GENESIS_BLOCK_HASH);
+        assert_eq!(rest.blockhashbyheight(0).await.unwrap().to_string(), f.genesis_block_hash);
     }
-    #[tokio::test]
-    async fn utxos() {
-        let test_endpoint = std::env::var(REST_ENV_NAME).unwrap_or(DEFAULT_ENDPOINT.to_string());
+    async fn utxos(f: &Fixture) {
+        let test_endpoint = std::env::var(f.rest_env_name).unwrap_or(DEFAULT_ENDPOINT.to_string());
         let rest = new(&test_endpoint);
         let utxos = rest.getutxos(true, &vec![
-            Txid::from_str(TXID_COINBASE_BLOCK1).unwrap(),
+            Txid::from_str(f.txid_coinbase_block1).unwrap(),
         ]).await.unwrap();
         assert!(utxos.chain_height > 0);
+    }
+    const BTC: Fixture = Fixture {
+        rest_env_name: "BITCOIN_REST_ENDPOINT",
+        genesis_block_hash: "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+        txid_coinbase_block1: "0e3e2357e806b6cdb1f70b54c3a3a17b6714ee1f0e68bebb44a74b1efd512098",
+    };
+    #[tokio::test]
+    async fn btc_tx() {
+        tx(&BTC).await;
+    }
+    #[tokio::test]
+    async fn btc_block() {
+        block(&BTC).await;
+    }
+    #[tokio::test]
+    async fn btc_block_notxdetails() {
+        block_notxdetails(&BTC).await;
+    }
+    #[tokio::test]
+    async fn btc_headers() {
+        headers(&BTC).await;
+    }
+    #[tokio::test]
+    async fn btc_chaininfo() {
+        chaininfo(&BTC).await;
+    }
+    #[tokio::test]
+    async fn btc_blockhashbyheight() {
+        blockhashbyheight(&BTC).await;
+    }
+    #[tokio::test]
+    async fn btc_utxos() {
+        utxos(&BTC).await;
     }
 }
