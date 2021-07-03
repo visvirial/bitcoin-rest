@@ -4,7 +4,6 @@
 //! converts them to [rust-bitcoin](https://github.com/rust-bitcoin/rust-bitcoin) objects.
 //! For details, please see [Context](./struct.Context.html).
 
-use std::str::FromStr;
 #[cfg(feature="softforks")]
 use std::collections::HashMap;
 use serde::Deserialize;
@@ -72,6 +71,24 @@ pub struct UtxoData {
     pub utxos: Vec<Utxo>,
 }
 
+#[derive(Debug)]
+pub enum Error {
+    Reqwest(reqwest::Error),
+    BitcoinEncodeError(bitcoin::consensus::encode::Error)
+}
+
+impl From<reqwest::Error> for Error {
+    fn from(err: reqwest::Error) -> Self {
+        Self::Reqwest(err)
+    }
+}
+
+impl From<bitcoin::consensus::encode::Error> for Error {
+    fn from(err: bitcoin::consensus::encode::Error) -> Self {
+        Self::BitcoinEncodeError(err)
+    }
+}
+
 /// `bitcoin_rest` context.
 #[derive(Debug, Clone)]
 pub struct Context {
@@ -118,48 +135,48 @@ impl Context {
         Ok(result)
     }
     /// Call the [/tx](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#transactions) endpoint.
-    pub async fn tx(&self, txhash: &Txid) -> Result<Transaction, reqwest::Error> {
+    pub async fn tx(&self, txhash: &Txid) -> Result<Transaction, Error> {
         let path = String::from("tx/") + &txhash.to_string();
         let result = self.call_bin(&path).await?;
-        Ok(Transaction::consensus_decode(result.as_ref()).unwrap())
+        Ok(Transaction::consensus_decode(result.as_ref())?)
     }
     /// Call the [/block](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blocks) endpoint.
-    pub async fn block(&self, blockhash: &BlockHash) -> Result<Block, reqwest::Error> {
+    pub async fn block(&self, blockhash: &BlockHash) -> Result<Block, Error> {
         let path = String::from("block/") + &blockhash.to_string();
         let result = self.call_bin(&path).await?;
-        Ok(Block::consensus_decode(result.as_ref()).unwrap())
+        Ok(Block::consensus_decode(result.as_ref())?)
     }
     /// Call the [/block/notxdetails](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blocks) endpoint.
-    pub async fn block_notxdetails(&self, blockhash: &BlockHash) -> Result<BlockHeader, reqwest::Error> {
+    pub async fn block_notxdetails(&self, blockhash: &BlockHash) -> Result<BlockHeader, Error> {
         let path = String::from("block/notxdetails/") + &blockhash.to_string();
         let result = self.call_bin(&path).await?;
-        Ok(BlockHeader::consensus_decode(result.as_ref()).unwrap())
+        Ok(BlockHeader::consensus_decode(result.as_ref())?)
     }
     /// Call the [/headers](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blockheaders) endpoint.
-    pub async fn headers(&self, count: u32, blockhash: &BlockHash) -> Result<Vec<BlockHeader>, reqwest::Error> {
+    pub async fn headers(&self, count: u32, blockhash: &BlockHash) -> Result<Vec<BlockHeader>, Error> {
         let path = String::from("headers/") + &count.to_string() + "/" + &blockhash.to_string();
         let result = self.call_bin(&path).await?;
         let mut ret = Vec::new();
         for i in 0..count {
             let begin = (i as usize) * 80usize;
             let end = ((i + 1) as usize) * 80usize;
-            ret.push(BlockHeader::consensus_decode(result.slice(begin .. end).as_ref()).unwrap());
+            ret.push(BlockHeader::consensus_decode(result.slice(begin .. end).as_ref())?);
         }
         Ok(ret)
     }
     /// Call the [/blockhashbyheight](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blockhash-by-height) endpoint.
-    pub async fn blockhashbyheight(&self, height: u32) -> Result<BlockHash, reqwest::Error> {
+    pub async fn blockhashbyheight(&self, height: u32) -> Result<BlockHash, Error> {
         let path = String::from("blockhashbyheight/") + &height.to_string();
-        let result = self.call_hex(&path).await?;
-        Ok(BlockHash::from_str(&result).unwrap())
+        let result = self.call_bin(&path).await?;
+        Ok(BlockHash::consensus_decode(result.as_ref())?)
     }
     /// Call the [/chaininfo](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#chaininfo) endpoint.
-    pub async fn chaininfo(&self) -> Result<ChainInfo, reqwest::Error> {
+    pub async fn chaininfo(&self) -> Result<ChainInfo, Error> {
         let result: ChainInfo = self.call_json("chaininfo").await?;
         Ok(result)
     }
     /// Call the [/getutxos](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#query-utxo-set) endpoint.
-    pub async fn getutxos(&self, checkmempool: bool, txids: &Vec<Txid>) -> Result<UtxoData, reqwest::Error> {
+    pub async fn getutxos(&self, checkmempool: bool, txids: &Vec<Txid>) -> Result<UtxoData, Error> {
         let mut url = String::from("getutxos/");
         if checkmempool {
             url += "checkmempool/"
@@ -172,9 +189,9 @@ impl Context {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
     use super::*;
     struct Fixture {
         rest_env_name: &'static str,
