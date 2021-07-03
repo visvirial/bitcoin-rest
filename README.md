@@ -4,6 +4,7 @@ bitcoin-rest
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![bitcoin-rest at crates.io](https://img.shields.io/crates/v/bitcoin-rest.svg)](https://crates.io/crates/bitcoin-rest)
 [![bitcoin-rest at docs.rs](https://docs.rs/bitcoin-rest/badge.svg)](https://docs.rs/bitcoin-rest)
+[![Rust](https://github.com/visvirial/bitcoin-rest/actions/workflows/rust.yml/badge.svg)](https://github.com/visvirial/bitcoin-rest/actions/workflows/rust.yml)
 [![codecov](https://codecov.io/gh/visvirial/bitcoin-rest/branch/master/graph/badge.svg?token=rF8vugGZuX)](https://codecov.io/gh/visvirial/bitcoin-rest)
 
 __bitcoin-rest__ is a Rust library for Bitcoin Core's REST API interface.
