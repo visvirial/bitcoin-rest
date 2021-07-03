@@ -14,7 +14,7 @@ use bitcoin::consensus::Decodable;
 
 pub const DEFAULT_ENDPOINT: &str = "http://localhost:8332/rest/";
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Softfork {
     #[serde(rename="type")]
     pub type_: String,
@@ -23,7 +23,7 @@ pub struct Softfork {
     pub height: u32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ChainInfo {
     pub chain: String,
     pub blocks: u32,
@@ -41,7 +41,7 @@ pub struct ChainInfo {
     pub warnings: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScriptPubKey {
     pub asm: String,
@@ -54,7 +54,7 @@ pub struct ScriptPubKey {
     pub addresses: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Utxo {
     pub height: u32,
@@ -62,7 +62,7 @@ pub struct Utxo {
     pub script_pub_key: ScriptPubKey,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UtxoData {
     pub chain_height: u32,
