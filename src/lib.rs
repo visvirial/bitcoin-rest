@@ -194,10 +194,20 @@ impl Context {
 mod tests {
     use std::str::FromStr;
     use super::*;
+    #[tokio::test]
+    async fn reqwest_fail() {
+        let rest = new("http://invalid-url/");
+        assert!(rest.blockhashbyheight(0).await.is_err());
+    }
     struct Fixture {
         rest_env_name: &'static str,
         genesis_block_hash: &'static str,
         txid_coinbase_block1: &'static str,
+    }
+    async fn decode_fail(f: &Fixture) {
+        let test_endpoint = std::env::var(f.rest_env_name).unwrap_or(DEFAULT_ENDPOINT.to_string());
+        let rest = new(&test_endpoint);
+        assert!(rest.blockhashbyheight(0xFFFFFFFF).await.is_err());
     }
     async fn tx(f: &Fixture) {
         let test_endpoint = std::env::var(f.rest_env_name).unwrap_or(DEFAULT_ENDPOINT.to_string());
@@ -237,6 +247,13 @@ mod tests {
         let rest = new(&test_endpoint);
         assert_eq!(rest.blockhashbyheight(0).await.unwrap().to_string(), f.genesis_block_hash);
     }
+    async fn blockhashbyheight_hex(f: &Fixture) {
+        let test_endpoint = std::env::var(f.rest_env_name).unwrap_or(DEFAULT_ENDPOINT.to_string());
+        let rest = new(&test_endpoint);
+        let blockhash_hex = rest.call_hex("blockhashbyheight/0").await.unwrap();
+        let blockhash = BlockHash::from_str(&blockhash_hex).unwrap();
+        assert_eq!(blockhash.to_string(), f.genesis_block_hash);
+    }
     async fn utxos(f: &Fixture) {
         let test_endpoint = std::env::var(f.rest_env_name).unwrap_or(DEFAULT_ENDPOINT.to_string());
         let rest = new(&test_endpoint);
@@ -250,18 +267,21 @@ mod tests {
         genesis_block_hash: "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
         txid_coinbase_block1: "0e3e2357e806b6cdb1f70b54c3a3a17b6714ee1f0e68bebb44a74b1efd512098",
     };
-    #[tokio::test] async fn btc_tx               () { tx               (&BTC).await; }
-    #[tokio::test] async fn btc_block            () { block            (&BTC).await; }
-    #[tokio::test] async fn btc_block_notxdetails() { block_notxdetails(&BTC).await; }
-    #[tokio::test] async fn btc_headers          () { headers          (&BTC).await; }
-    #[tokio::test] async fn btc_chaininfo        () { chaininfo        (&BTC).await; }
-    #[tokio::test] async fn btc_blockhashbyheight() { blockhashbyheight(&BTC).await; }
-    #[tokio::test] async fn btc_utxos            () { utxos            (&BTC).await; }
+    #[tokio::test] async fn btc_decode_fail          () { decode_fail          (&BTC).await; }
+    #[tokio::test] async fn btc_tx                   () { tx                   (&BTC).await; }
+    #[tokio::test] async fn btc_block                () { block                (&BTC).await; }
+    #[tokio::test] async fn btc_block_notxdetails    () { block_notxdetails    (&BTC).await; }
+    #[tokio::test] async fn btc_headers              () { headers              (&BTC).await; }
+    #[tokio::test] async fn btc_chaininfo            () { chaininfo            (&BTC).await; }
+    #[tokio::test] async fn btc_blockhashbyheight    () { blockhashbyheight    (&BTC).await; }
+    #[tokio::test] async fn btc_blockhashbyheight_hex() { blockhashbyheight_hex(&BTC).await; }
+    #[tokio::test] async fn btc_utxos                () { utxos                (&BTC).await; }
     const MONA: Fixture = Fixture {
         rest_env_name: "MONACOIN_REST_ENDPOINT",
         genesis_block_hash: "ff9f1c0116d19de7c9963845e129f9ed1bfc0b376eb54fd7afa42e0d418c8bb6",
         txid_coinbase_block1: "10067abeabcd96a1261bc542b16d686d083308304923d74cb8f3bab4209cc3b9",
     };
+    #[tokio::test] async fn mona_decode_fail      () { decode_fail      (&MONA).await; }
     #[tokio::test] async fn mona_tx               () { tx               (&MONA).await; }
     #[tokio::test] async fn mona_block            () { block            (&MONA).await; }
     #[tokio::test] async fn mona_block_notxdetails() { block_notxdetails(&MONA).await; }
