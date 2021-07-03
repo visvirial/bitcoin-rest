@@ -157,10 +157,11 @@ impl Context {
         let path = String::from("headers/") + &count.to_string() + "/" + &blockhash.to_string();
         let result = self.call_bin(&path).await?;
         let mut ret = Vec::new();
-        for i in 0..count {
-            let begin = (i as usize) * 80usize;
-            let end = ((i + 1) as usize) * 80usize;
-            ret.push(BlockHeader::consensus_decode(result.slice(begin .. end).as_ref())?);
+        const BLOCK_HEADER_SIZE: usize = 80usize;
+        let mut offset = 0;
+        while offset < result.len() {
+            ret.push(BlockHeader::consensus_decode(result[offset..(offset+BLOCK_HEADER_SIZE)].as_ref())?);
+            offset += BLOCK_HEADER_SIZE;
         }
         Ok(ret)
     }
