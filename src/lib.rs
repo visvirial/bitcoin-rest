@@ -7,6 +7,8 @@
 #[cfg(feature="softforks")]
 use std::collections::HashMap;
 use serde::Deserialize;
+pub use reqwest;
+pub use bitcoin;
 use bitcoin::hash_types::{BlockHash, Txid};
 use bitcoin::blockdata::block::{Block, BlockHeader};
 use bitcoin::blockdata::transaction::Transaction;

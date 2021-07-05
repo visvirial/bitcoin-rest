@@ -17,8 +17,8 @@ softforks = []
 
 [dependencies]
 bytes = "1.0"
-reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
+reqwest = { version = "0.11", features = ["json"] }
 bitcoin = "0.26"
 
 [dev-dependencies]
