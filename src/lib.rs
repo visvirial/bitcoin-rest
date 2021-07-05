@@ -2,11 +2,13 @@
 //! 
 //! This library calls the [Bitcoin Core's REST API endpoint](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md) and
 //! converts them to [rust-bitcoin](https://github.com/rust-bitcoin/rust-bitcoin) objects.
+//! 
 //! For details, please see [Context](./struct.Context.html).
 
 #[cfg(feature="softforks")]
 use std::collections::HashMap;
 use serde::Deserialize;
+pub use bytes;
 pub use reqwest;
 pub use bitcoin;
 use bitcoin::hash_types::{BlockHash, Txid};
