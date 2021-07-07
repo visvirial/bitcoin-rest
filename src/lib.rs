@@ -140,26 +140,22 @@ impl Context {
     }
     /// Call the [/tx](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#transactions) endpoint.
     pub async fn tx(&self, txhash: &Txid) -> Result<Transaction, Error> {
-        let path = String::from("tx/") + &txhash.to_string();
-        let result = self.call_bin(&path).await?;
+        let result = self.call_bin(&["tx", &txhash.to_string()].join("/")).await?;
         Ok(Transaction::consensus_decode(result.as_ref())?)
     }
     /// Call the [/block](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blocks) endpoint.
     pub async fn block(&self, blockhash: &BlockHash) -> Result<Block, Error> {
-        let path = String::from("block/") + &blockhash.to_string();
-        let result = self.call_bin(&path).await?;
+        let result = self.call_bin(&["block", &blockhash.to_string()].join("/")).await?;
         Ok(Block::consensus_decode(result.as_ref())?)
     }
     /// Call the [/block/notxdetails](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blocks) endpoint.
     pub async fn block_notxdetails(&self, blockhash: &BlockHash) -> Result<BlockHeader, Error> {
-        let path = String::from("block/notxdetails/") + &blockhash.to_string();
-        let result = self.call_bin(&path).await?;
+        let result = self.call_bin(&["block", "notxdetails", &blockhash.to_string()].join("/")).await?;
         Ok(BlockHeader::consensus_decode(result.as_ref())?)
     }
     /// Call the [/headers](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blockheaders) endpoint.
     pub async fn headers(&self, count: u32, blockhash: &BlockHash) -> Result<Vec<BlockHeader>, Error> {
-        let path = String::from("headers/") + &count.to_string() + "/" + &blockhash.to_string();
-        let result = self.call_bin(&path).await?;
+        let result = self.call_bin(&["headers", &count.to_string(), &blockhash.to_string()].join("/")).await?;
         let mut ret = Vec::new();
         const BLOCK_HEADER_SIZE: usize = 80usize;
         let mut offset = 0;
@@ -171,8 +167,7 @@ impl Context {
     }
     /// Call the [/blockhashbyheight](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#blockhash-by-height) endpoint.
     pub async fn blockhashbyheight(&self, height: u32) -> Result<BlockHash, Error> {
-        let path = String::from("blockhashbyheight/") + &height.to_string();
-        let result = self.call_bin(&path).await?;
+        let result = self.call_bin(&["blockhashbyheight", &height.to_string()].join("/")).await?;
         Ok(BlockHash::consensus_decode(result.as_ref())?)
     }
     /// Call the [/chaininfo](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#chaininfo) endpoint.
@@ -182,14 +177,15 @@ impl Context {
     }
     /// Call the [/getutxos](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#query-utxo-set) endpoint.
     pub async fn getutxos(&self, checkmempool: bool, txids: &[Txid]) -> Result<UtxoData, Error> {
-        let mut url = String::from("getutxos/");
+        let mut path = Vec::with_capacity(1 + if checkmempool { 0 } else { 1 } + txids.len());
+        path.push("getutxos".to_string());
         if checkmempool {
-            url += "checkmempool/"
+            path.push("checkmempool".to_string());
         }
         for (i, txid) in txids.iter().enumerate() {
-            url += &(txid.to_string() + "-" + &i.to_string());
+            path.push([txid.to_string(), i.to_string()].join("-"));
         }
-        let result: UtxoData = self.call_json(&url).await?;
+        let result: UtxoData = self.call_json(&path.join("/")).await?;
         Ok(result)
     }
 }
@@ -200,7 +196,7 @@ mod tests {
     use super::*;
     #[tokio::test]
     async fn reqwest_fail() {
-        let rest = new("http://invalid-url/");
+        let rest = new("http://invalid-url");
         assert!(rest.blockhashbyheight(0).await.is_err());
     }
     struct Fixture {
