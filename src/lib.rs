@@ -102,7 +102,7 @@ pub struct Context {
 
 /// Create a new `bitcoin_rest` context.
 ///
-/// The `endpoint` will be the string like "http://localhost:8332/rest/"
+/// The `endpoint` will be the string like "http://localhost:8332/rest"
 /// (Note: this string is available via `bitcoin_rest::DEFAULT_ENDPOINT`).
 pub fn new(endpoint: &str) -> Context {
     Context {
