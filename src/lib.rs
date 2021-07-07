@@ -16,7 +16,7 @@ use bitcoin::blockdata::block::{Block, BlockHeader};
 use bitcoin::blockdata::transaction::Transaction;
 use bitcoin::consensus::Decodable;
 
-pub const DEFAULT_ENDPOINT: &str = "http://localhost:8332/rest/";
+pub const DEFAULT_ENDPOINT: &str = "http://localhost:8332/rest";
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Softfork {
@@ -114,7 +114,7 @@ pub fn new(endpoint: &str) -> Context {
 impl Context {
     /// Call the REST endpoint and parse it as a JSON.
     pub async fn call_json<T: for<'de> Deserialize<'de>>(&self, path: &str) -> Result<T, reqwest::Error> {
-        let url = String::new() + &self.endpoint + path + ".json";
+        let url = format!("{}/{}.json", &self.endpoint, path);
         let result = self.client.get(url)
             .send().await?
             .json::<T>().await?;
@@ -122,7 +122,7 @@ impl Context {
     }
     /// Call the REST endpoint (binary).
     pub async fn call_bin(&self, path: &str) -> Result<bytes::Bytes, reqwest::Error> {
-        let url = String::new() + &self.endpoint + path + ".bin";
+        let url = format!("{}/{}.bin", &self.endpoint, path);
         let result = self.client.get(url)
             .send().await?
             .bytes().await?;
@@ -130,7 +130,7 @@ impl Context {
     }
     /// Call the REST endpoint (hex).
     pub async fn call_hex(&self, path: &str) -> Result<String, reqwest::Error> {
-        let url = String::new() + &self.endpoint + path + ".hex";
+        let url = format!("{}/{}.hex", &self.endpoint, path);
         let mut result = self.client.get(url)
             .send().await?
             .text().await?;
