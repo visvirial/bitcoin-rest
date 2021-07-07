@@ -181,13 +181,13 @@ impl Context {
         Ok(result)
     }
     /// Call the [/getutxos](https://github.com/bitcoin/bitcoin/blob/master/doc/REST-interface.md#query-utxo-set) endpoint.
-    pub async fn getutxos(&self, checkmempool: bool, txids: &Vec<Txid>) -> Result<UtxoData, Error> {
+    pub async fn getutxos(&self, checkmempool: bool, txids: &[Txid]) -> Result<UtxoData, Error> {
         let mut url = String::from("getutxos/");
         if checkmempool {
             url += "checkmempool/"
         }
-        for i in 0..txids.len() {
-            url += &(txids[i].to_string() + "-" + &i.to_string());
+        for (i, txid) in txids.iter().enumerate() {
+            url += &(txid.to_string() + "-" + &i.to_string());
         }
         let result: UtxoData = self.call_json(&url).await?;
         Ok(result)
